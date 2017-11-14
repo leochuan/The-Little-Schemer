@@ -285,3 +285,33 @@
       ((and (atom? s1) (atom? s2)) (eqan? s1 s2))
       ((or (atom? s1) (atom? s2)) #f)
       (else (eqlist? s1 s2)))))
+
+(define numbered?
+  (lambda (aexp)
+    (cond
+      ((atom? aexp) (number? aexp))
+      (else (and (numbered? (car aexp)) (numbered? (car (cdr (cdr aexp)))))))))
+
+(define first-sub-exp
+  (lambda (aexp) (car (cdr aexp))))
+
+(define second-sub-exp
+  (lambda (aexp) (car (cdr (cdr aexp)))))
+
+(define operator
+  (lambda (aexp) (car aexp)))
+
+(define value
+  (lambda (aexp)
+    (cond
+      ((atom? aexp) aexp)
+      ((eq? (operator aexp) (quote +))
+       (o+ (value (first-sub-exp aexp))
+           (value (second-sub-exp aexp))))
+      ((eq? (operator aexp) (quote *))
+       (o* (value (first-sub-exp aexp))
+           (value (second-sub-exp aexp))))
+      (else
+        (power (value (first-sub-exp aexp))
+               (value (second-sub-exp aexp)))))))
+
