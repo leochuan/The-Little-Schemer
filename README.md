@@ -6,7 +6,7 @@
 - [x] ~~Chapter four~~
 - [x] ~~Chapter five~~
 - [x] ~~Chapter six~~
-- [ ] Chapter seven
+- [x] ~~Chapter seven~~
 - [ ] Chapter eight
 - [ ] Chapter nine
 - [ ] Chapter ten
