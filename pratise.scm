@@ -29,26 +29,28 @@
       ((null? l) (quote ()))
       (else (cons (car (car l)) (firsts (cdr l)))))))
 
+(define insert-g
+  (lambda (seq)
+    (lambda (new old l)
+      (cond
+        ((null? l) (quote ()))
+        ((eq? old (car l)) (seq new old (cdr l)))
+        (else (cons? (car l) ((insert-g seq) new old l)))))))
+
 (define insertR
-  (lambda (new old lat)
-    (cond
-      ((null? lat) (quote ()))
-      ((eq? (car lat) old) (cons old (cons new (cdr lat))))
-      (else (cons (car lat) (insertR new old (cdr lat)))))))
+  (insert-g
+    (lambda (new old l)
+      (cons old (cons new l)))))
 
 (define insertL
-  (lambda (new old lat)
-    (cond 
-      ((null? lat) (quote ()))
-      ((eq? (car lat) old) (cons new lat))
-      (else (cons (car lat) (insertL new old (cdr lat)))))))
+  (insert-g
+    (lambda (new old l)
+      (cons new (cons old l)))))
 
 (define subst
-  (lambda (new old lat)
-    (cond 
-      ((null? lat) (quote ()))
-      ((eq? (car lat) old) (cons new (cdr lat)))
-      (else (cons (car lat) (subst new old (cdr lat)))))))
+  (insert-g
+    (lambda (new old l)
+      (cons new l))))
 
 (define subst2
   (lambda (new o1 o2 lat)
@@ -64,7 +66,22 @@
       ((eq? a (car lat)) (multirember a (cdr lat)))
       (else (cons (car lat) (multirember a (cdr lat)))))))
 
-(define multiinsertR 
+(define multirember-f
+  (lambda (method)
+    (lambda (a lat)
+      (cond
+        ((null? lat) (quote ()))
+        ((method a (car lat)) (multirember a (cdr lat)))
+        (else (cons (car lat) (multirember a (cdr lat))))))))
+
+(define multiremberT
+  (lambda (method lat)
+    (cond
+      ((null? lat) (quote ()))
+      ((method (cdr lat)) (multiremberT method (cdr lat)))
+      (else (cons (car lat) (multiremberT method (cdr lat)))))))
+
+(define multiinsertR
   (lambda (new old lat)
     (cond
       ((null? lat) (quote ()))
@@ -77,6 +94,31 @@
       ((null? lat) (quote ()))
       ((eq? old (car lat)) (cons new (cons old (multiinsertL new old (cdr lat)))))
       (else (cons (car lat) (multiinsertL new old (cdr lat)))))))
+
+(define multiinsertLR
+  (lambda (new oldL oldR lat)
+    (cond
+      ((null? lat) (quote ()))
+      ((eq? (car lat) oldL) (cons new (cons oldL (multiinsertLR new oldL oldR (cdr lat)))))
+      ((eq? (car lat) oldR) (cons oldR (cons new (multiinsertLR new oldL oldR (cdr lat)))))
+      (else (cons (car lat) (multiinsertLR (cdr lat)))))))
+
+(define multiinsertLR&co
+  (lambda (new oldL oldR lat col)
+    (cond
+      ((null? lat) (col (quote ()) 0 0))
+      ((eq? (car lat) oldL)
+        (multiinsertLR&co new oldL oldR (cdr lat) 
+          (lambda (newlat L R)
+            (col (cons new (cons oldL newlat)) (add1 L) R))))
+      ((eq? (car lat) oldR)
+        (multiinsertLR&co new oldL oldR (cdr lat)
+          (lambda (newlat L R)
+            (col (cons oldR (cons new newlat)) L (add1 R)))))
+      (else
+        (multiinsertLR&co new oldL oldR (cdr lat)
+          (lambda (newlat L R)
+            (col (cons (car lat) newlat) L R)))))))
 
 (define multisubst
   (lambda (new old lat)
@@ -301,19 +343,21 @@
 (define operator
   (lambda (aexp) (car aexp)))
 
+(define atom-to-function
+  (lambda (x)
+    (cond
+      ((eq? x (quote +)) o+)
+      ((eq? x (quote *)) o*)
+      (else power))))
+
 (define value
   (lambda (aexp)
     (cond
       ((atom? aexp) aexp)
-      ((eq? (operator aexp) (quote +))
-       (o+ (value (first-sub-exp aexp))
-           (value (second-sub-exp aexp))))
-      ((eq? (operator aexp) (quote *))
-       (o* (value (first-sub-exp aexp))
-           (value (second-sub-exp aexp))))
       (else
-        (power (value (first-sub-exp aexp))
-               (value (second-sub-exp aexp)))))))
+        ((atom-to-function (operator aexp))
+          (value (first-sub-exp aexp))
+          (value (second-sub-exp aexp)))))))
 
 (define set?
   (lambda (lat)
@@ -422,3 +466,57 @@
 (define fullfun?
   (lambda (fun)
     (set? (seconds fun))))
+
+(define rember-f
+  (lambda (method)
+    (lambda (a l)
+      (cond
+        ((null? l) (quote ()))
+        ((method a (car l)) (cdr l))
+        (else (cons (car l) ((rember-f method) a (cdr l))))))))
+
+(define insertL-f
+  (lambda (method)
+    (lambda (new old l)
+      (cond
+        ((null? l) (quote ()))
+        ((method old (car l)) (cons new l))
+        (else (cons (car l) ((insertL-f method) new old (cdr l))))))))
+
+(define insertR-f
+  (lambda (method)
+    (lambda (new old l)
+      (cond
+        ((null? l) (quote ()))
+        ((method old (car l)) (cons old (cons new (cdr l))))
+        (else (cons (car l) ((insertR-f method) new old (cdr l))))))))
+
+(define evens-only*
+  (lambda (l)
+    (cond
+      ((null? l) (quote ()))
+      ((atom? (car l))
+        (cond
+          ((even? (car l)) (cons (car l) (evens-only* (cdr l))))
+          (else (evens-only* (cdr l)))))
+      (else (cons (evens-only* (car l)) (evens-only* (cdr l)))))))
+
+(define evens-only*&co
+  (lambda (l col)
+    (cond
+      ((null? l) (col (quote ()) 1 0))
+      ((atom? (car l))
+        (cond
+          ((even? (car l))
+            (evens-only*&co (cdr l)
+              (lambda (newlat p s)
+                (col (cons (car l) newlat) (o* p (car l)) s))))
+          (else
+            (evens-only*&co (cdr l)
+              (lambda (newlat p s)
+                (col newlat p (o+ s (car l))))))))
+      (else (evens-only*&co (car l)
+        (lambda (al ap as)
+          (evens-only*&co (cdr l)
+            (lambda (dl dp ds)
+              (col (cons al dl) (o* dp ap) (o+ ds as))))))))))
