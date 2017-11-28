@@ -431,15 +431,15 @@
       ((null? (cdr (cdr x))) #t)
       (else #f))))
 
-(define pair-first
+(define first
   (lambda (p)
     (car p)))
 
-(define pair-second
+(define second
   (lambda (p)
     (car (cdr p))))
 
-(define build-pair
+(define build
   (lambda (s1 s2)
     (cons s1 (cons s2 (quote ())))))
 
@@ -449,7 +449,7 @@
 
 (define revpair
   (lambda (pair)
-    (build-pair (pair-second pair) (pair-first pair))))
+    (build (second pair) (first pair))))
 
 (define revrel
   (lambda (rel)
@@ -520,3 +520,31 @@
           (evens-only*&co (cdr l)
             (lambda (dl dp ds)
               (col (cons al dl) (o* dp ap) (o+ ds as))))))))))
+
+(define keep-looking
+  (lambda (a sorn lat)
+    (cond
+      ((number? sorn) (keep-looking a (pick sorn lat) lat))
+      (else (eq? a sorn)))))
+
+(define looking
+  (lambda (a lat)
+    (keep-looking a (pick 1 lat) lat)))
+
+(define shift
+  (lambda (pair)
+    (build (first (first pair)) (build (second (first pair)) (second pair)))))
+
+(define align
+  (lambda (pora)
+    (cond
+      ((atom? pora) pora)
+      ((a-pair? (first pora))
+        (align (shift pora)))
+      (else (build (first pora) (align (second pora)))))))
+
+(define weight*
+  (lambda (pora)
+    (cond
+      ((atom? pora) 1)
+      (else (o+ (o* (weight* (first pora)) 2) (weight* (second pora)))))))

@@ -8,5 +8,5 @@
 - [x] ~~Chapter six~~
 - [x] ~~Chapter seven~~
 - [x] ~~Chapter eight~~
-- [ ] Chapter nine
+- [x] ~~Chapter nine~~
 - [ ] Chapter ten
